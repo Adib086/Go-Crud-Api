@@ -1,95 +1,90 @@
 package main
 
 import (
+	"GoCrudApi/database"
 	"GoCrudApi/types"
 
 	"fmt"
 	"github.com/labstack/echo/v4"
-	"math/rand"
 	"net/http"
 	"strconv"
 )
 
-var users []types.User
-var courses []types.Course
+//var users []types.User
+//var courses []types.Course
 
 func getUsers(c echo.Context) error {
-	return c.JSON(http.StatusOK, users)
+	var user []types.User
+	if err := database.Db.Preload("Courses").Find(&user).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, user)
 }
 func deleteUsers(c echo.Context) error {
 	id := c.Param("id")
-	for index, item := range users {
-		if item.Id == id {
-			users = append(users[:index], users[index+1:]...)
-			break
-		}
+	if err := database.Db.Delete(&types.User{}, id).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
-	return c.JSON(http.StatusOK, users)
+	return c.JSON(http.StatusOK, id)
 }
 
 func getUsersById(c echo.Context) error {
 	id := c.Param("id")
-
-	for _, item := range users {
-		if item.Id == id {
-
-			return c.JSON(http.StatusOK, item)
-		}
+	var user types.User
+	if err := database.Db.Preload("Courses").First(&user, id).Error; err != nil {
+		return c.JSON(http.StatusNotFound, "User not found")
 	}
-	return c.JSON(http.StatusNotFound, map[string]string{"message": "user not found"})
+	return c.JSON(http.StatusOK, user)
 }
 
 func createUser(c echo.Context) error {
 
 	var user types.User
 	if err := c.Bind(&user); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	user.Id = strconv.Itoa(rand.Intn(10000000))
-	users = append(users, user)
-	return c.JSON(http.StatusOK, user)
+	if err := database.Db.Create(&user).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusCreated, user)
 
 }
 
 func updateUsers(c echo.Context) error {
 	id := c.Param("id")
-	for index, item := range users {
-		if item.Id == id {
-			users = append(users[:index], users[index+1:]...)
-			var updatedUser types.User
-			if err := c.Bind(&updatedUser); err != nil {
-				return err
-			}
-			updatedUser.Id = id
-			users = append(users, updatedUser)
-			return c.JSON(http.StatusOK, updatedUser)
-		}
+	var user types.User
+	if err := database.Db.First(&user, id).Error; err != nil {
+		return c.JSON(http.StatusNotFound, err.Error())
 	}
-	return c.JSON(http.StatusNotFound, map[string]string{"message": "user not found"})
+	if err := c.Bind(&user); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+	if err := database.Db.Save(&user).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, user)
 }
 
 func getCourses(c echo.Context) error {
-	return c.JSON(http.StatusOK, courses)
-}
-func deleteCourse(c echo.Context) error {
-	id := c.Param("id")
-	for i, course := range courses {
-		if course.ID == id {
-			courses = append(courses[:i], courses[i+1:]...)
-			break
-		}
+	var courses []types.Course
+	if err := database.Db.Find(&courses).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Error fetching courses"})
 	}
 	return c.JSON(http.StatusOK, courses)
 }
 
 func getCourseById(c echo.Context) error {
-	id := c.Param("id")
-	for _, course := range courses {
-		if course.ID == id {
-			return c.JSON(http.StatusOK, course)
-		}
+	idParam := c.Param("id")
+	id, err := strconv.ParseUint(idParam, 10, 32)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "invalid course ID"})
 	}
-	return c.JSON(http.StatusNotFound, map[string]string{"message": "course not found"})
+
+	var course types.Course
+	if err := database.Db.First(&course, id).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"message": "course not found"})
+	}
+	return c.JSON(http.StatusOK, course)
 }
 
 func createCourse(c echo.Context) error {
@@ -97,47 +92,70 @@ func createCourse(c echo.Context) error {
 	if err := c.Bind(&course); err != nil {
 		return err
 	}
-	course.ID = strconv.Itoa(rand.Intn(10000000))
-	courses = append(courses, course)
+	if err := database.Db.Create(&course).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "failed to create course"})
+	}
 	return c.JSON(http.StatusCreated, course)
 }
 
 func updateCourse(c echo.Context) error {
-	id := c.Param("id")
-	for i, course := range courses {
-		if course.ID == id {
-			courses = append(courses[:i], courses[i+1:]...)
-			var updatedCourse types.Course
-			if err := c.Bind(&updatedCourse); err != nil {
-				return err
-			}
-			updatedCourse.ID = id
-			courses = append(courses, updatedCourse)
-			return c.JSON(http.StatusOK, updatedCourse)
-		}
+	idParam := c.Param("id")
+	id, err := strconv.ParseUint(idParam, 10, 32)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "invalid course ID"})
 	}
-	return c.JSON(http.StatusNotFound, map[string]string{"message": "course not found"})
+
+	var course types.Course
+	if err := database.Db.First(&course, id).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"message": "course not found"})
+	}
+
+	var updatedCourse types.Course
+	if err := c.Bind(&updatedCourse); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "invalid input"})
+	}
+
+	course.Title = updatedCourse.Title
+
+	if err := database.Db.Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "failed to update course"})
+	}
+
+	return c.JSON(http.StatusOK, course)
+}
+
+func deleteCourse(c echo.Context) error {
+	id := c.Param("id")
+	var course types.Course
+	if err := database.Db.First(&course, "id = ?", id).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"message": "Course not found"})
+	}
+	if err := database.Db.Delete(&course).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Error deleting course"})
+	}
+	return c.JSON(http.StatusOK, map[string]string{"message": "Course deleted"})
 }
 
 func main() {
 	fmt.Println("Hello World")
 	e := echo.New()
-	users = append(users, types.User{
-		Id:   "12",
-		Name: "Adib",
-		Age:  22,
-		Courses: []types.Course{
-			{
-				ID:    "1",
-				Title: "Bangla",
-			},
-		},
-	})
-
-	courses = append(courses, types.Course{
-		ID:    "2",
-		Title: "English",
-	})
+	database.Connect()
+	//users = append(users, types.User{
+	//	Id:   "12",
+	//	Name: "Adib",
+	//	Age:  22,
+	//	Courses: []types.Course{
+	//		{
+	//			ID:    "1",
+	//			Title: "Bangla",
+	//		},
+	//	},
+	//})
+	//
+	//courses = append(courses, types.Course{
+	//	ID:    "2",
+	//	Title: "English",
+	//})
 	e.GET("/users", getUsers)
 	e.GET("/users/{id}", getUsersById)
 	e.POST("/users", createUser)

@@ -1,6 +1,9 @@
 package types
 
+import "gorm.io/gorm"
+
 type Course struct {
-	ID    string `json:"id"`
+	gorm.Model
+	ID    uint   `gorm:"primaryKey"`
 	Title string `json:"title"`
 }

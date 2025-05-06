@@ -1,8 +1,11 @@
 package types
 
+import "gorm.io/gorm"
+
 type User struct {
-	Id      string   `json:"id"`
+	gorm.Model
+	ID      uint     `gorm:"primaryKey"`
 	Name    string   `json:"name"`
 	Age     int      `json:"age"`
-	Courses []Course `json:"courses"`
+	Courses []Course `gorm:"many2many:user_courses;" json:"courses"`
 }
