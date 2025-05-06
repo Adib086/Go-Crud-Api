@@ -2,10 +2,9 @@ package main
 
 import (
 	"GoCrudApi/types"
-	"encoding/json"
+
 	"fmt"
-	"github.com/gorilla/mux"
-	"log"
+	"github.com/labstack/echo/v4"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -14,113 +13,115 @@ import (
 var users []types.User
 var courses []types.Course
 
-func getUsers(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(writer).Encode(users)
+func getUsers(c echo.Context) error {
+	return c.JSON(http.StatusOK, users)
 }
-func deleteUsers(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(request)
+func deleteUsers(c echo.Context) error {
+	id := c.Param("id")
 	for index, item := range users {
-		if item.Id == params["id"] {
+		if item.Id == id {
 			users = append(users[:index], users[index+1:]...)
 			break
 		}
 	}
-	json.NewEncoder(writer).Encode(users)
+	return c.JSON(http.StatusOK, users)
 }
 
-func getUsersById(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(request)
+func getUsersById(c echo.Context) error {
+	id := c.Param("id")
+
 	for _, item := range users {
-		if item.Id == params["id"] {
-			json.NewEncoder(writer).Encode(item)
-			return
+		if item.Id == id {
+
+			return c.JSON(http.StatusOK, item)
 		}
 	}
+	return c.JSON(http.StatusNotFound, map[string]string{"message": "user not found"})
 }
-func createUser(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "application/json")
+
+func createUser(c echo.Context) error {
+
 	var user types.User
-	_ = json.NewDecoder(request.Body).Decode(&user)
+	if err := c.Bind(&user); err != nil {
+		return err
+	}
 	user.Id = strconv.Itoa(rand.Intn(10000000))
 	users = append(users, user)
-	json.NewEncoder(writer).Encode(user)
+	return c.JSON(http.StatusOK, user)
 
 }
 
-func updateUsers(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(request)
+func updateUsers(c echo.Context) error {
+	id := c.Param("id")
 	for index, item := range users {
-		if item.Id == params["id"] {
+		if item.Id == id {
 			users = append(users[:index], users[index+1:]...)
-			var user types.User
-			_ = json.NewDecoder(request.Body).Decode(&user)
-			user.Id = params["id"]
-			users = append(users, user)
-			json.NewEncoder(writer).Encode(user)
-			return
+			var updatedUser types.User
+			if err := c.Bind(&updatedUser); err != nil {
+				return err
+			}
+			updatedUser.Id = id
+			users = append(users, updatedUser)
+			return c.JSON(http.StatusOK, updatedUser)
 		}
 	}
+	return c.JSON(http.StatusNotFound, map[string]string{"message": "user not found"})
 }
 
-func getCourses(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(writer).Encode(courses)
+func getCourses(c echo.Context) error {
+	return c.JSON(http.StatusOK, courses)
 }
-func deleteCourse(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(request)
-	for index, item := range courses {
-		if item.ID == params["id"] {
-			courses = append(courses[:index], courses[index+1:]...)
+func deleteCourse(c echo.Context) error {
+	id := c.Param("id")
+	for i, course := range courses {
+		if course.ID == id {
+			courses = append(courses[:i], courses[i+1:]...)
 			break
 		}
 	}
-	json.NewEncoder(writer).Encode(users)
+	return c.JSON(http.StatusOK, courses)
 }
 
-func getCourseById(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(request)
-	for _, item := range courses {
-		if item.ID == params["id"] {
-			json.NewEncoder(writer).Encode(item)
-			return
+func getCourseById(c echo.Context) error {
+	id := c.Param("id")
+	for _, course := range courses {
+		if course.ID == id {
+			return c.JSON(http.StatusOK, course)
 		}
 	}
+	return c.JSON(http.StatusNotFound, map[string]string{"message": "course not found"})
 }
-func createCourse(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "application/json")
+
+func createCourse(c echo.Context) error {
 	var course types.Course
-	_ = json.NewDecoder(request.Body).Decode(&course)
+	if err := c.Bind(&course); err != nil {
+		return err
+	}
 	course.ID = strconv.Itoa(rand.Intn(10000000))
 	courses = append(courses, course)
-	json.NewEncoder(writer).Encode(course)
-
+	return c.JSON(http.StatusCreated, course)
 }
 
-func updateCourse(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(request)
-	for index, item := range courses {
-		if item.ID == params["id"] {
-			courses = append(courses[:index], courses[index+1:]...)
-			var course types.Course
-			_ = json.NewDecoder(request.Body).Decode(&course)
-			course.ID = params["id"]
-			courses = append(courses, course)
-			json.NewEncoder(writer).Encode(course)
-			return
+func updateCourse(c echo.Context) error {
+	id := c.Param("id")
+	for i, course := range courses {
+		if course.ID == id {
+			courses = append(courses[:i], courses[i+1:]...)
+			var updatedCourse types.Course
+			if err := c.Bind(&updatedCourse); err != nil {
+				return err
+			}
+			updatedCourse.ID = id
+			courses = append(courses, updatedCourse)
+			return c.JSON(http.StatusOK, updatedCourse)
 		}
 	}
+	return c.JSON(http.StatusNotFound, map[string]string{"message": "course not found"})
 }
 
 func main() {
 	fmt.Println("Hello World")
-	r := mux.NewRouter()
+	e := echo.New()
 	users = append(users, types.User{
 		Id:   "12",
 		Name: "Adib",
@@ -137,17 +138,17 @@ func main() {
 		ID:    "2",
 		Title: "English",
 	})
-	r.HandleFunc("/users", getUsers).Methods("GET")
-	r.HandleFunc("/users/{id}", getUsersById).Methods("GET")
-	r.HandleFunc("/users", createUser).Methods("POST")
-	r.HandleFunc("/users/{id}", updateUsers).Methods("PUT")
-	r.HandleFunc("/users/{id}", deleteUsers).Methods("DELETE")
-	r.HandleFunc("/courses", getCourses).Methods("GET")
-	r.HandleFunc("/courses/{id}", getCourseById).Methods("GET")
-	r.HandleFunc("/courses", createCourse).Methods("POST")
-	r.HandleFunc("/courses/{id}", updateCourse).Methods("PUT")
-	r.HandleFunc("/courses/{id}", deleteCourse).Methods("DELETE")
+	e.GET("/users", getUsers)
+	e.GET("/users/{id}", getUsersById)
+	e.POST("/users", createUser)
+	e.PUT("/users/{id}", updateUsers)
+	e.DELETE("/users/{id}", deleteUsers)
+	e.GET("/courses", getCourses)
+	e.GET("/courses/{id}", getCourseById)
+	e.POST("/courses", createCourse)
+	e.PUT("/courses/{id}", updateCourse)
+	e.DELETE("/courses/{id}", deleteCourse)
 
 	fmt.Println("Server started at port 8080")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	e.Logger.Fatal(e.Start(":8080"))
 }
