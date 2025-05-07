@@ -3,20 +3,22 @@ package database
 import (
 	"GoCrudApi/types"
 	"fmt"
-	"gorm.io/driver/sqlserver"
+	"gorm.io/driver/mysql"
+	"log"
+
 	"gorm.io/gorm"
 )
 
 var Db *gorm.DB
 
 func Connect() {
-	dsn := "sqlserver://@127.0.0.1:5752?database=GoCrudApi&encrypt=disable"
+	dsn := "root:123@tcp(localhost:3306)/GoCurdApi?charset=utf8mb4&parseTime=True&loc=Local"
 	var err error
-	Db, err = gorm.Open(sqlserver.Open(dsn), &gorm.Config{})
+	Db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+		fmt.Println("Database connection established")
 	}
-	fmt.Println("Database connection established")
 
 	err = Db.AutoMigrate(&types.User{}, &types.Course{})
 	if err != nil {
