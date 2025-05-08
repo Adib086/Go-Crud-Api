@@ -4,7 +4,7 @@ import (
 	"GoCrudApi/types"
 	"fmt"
 	"gorm.io/driver/mysql"
-	"log"
+	"os"
 
 	"gorm.io/gorm"
 )
@@ -12,12 +12,18 @@ import (
 var Db *gorm.DB
 
 func Connect() {
-	dsn := "root:123@tcp(localhost:3306)/GoCurdApi?charset=utf8mb4&parseTime=True&loc=Local"
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", user, password, host, port, dbname)
+
 	var err error
 	Db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatal(err)
-		fmt.Println("Database connection established")
+		panic("failed to connect to database: " + err.Error())
 	}
 
 	err = Db.AutoMigrate(&types.User{}, &types.Course{})
